@@ -1,1 +1,14 @@
-**/secrets.h
+# Segredos (NUNCA commitar)
+firmware/qualidade_ar/secrets.h
+
+# Arduino / PlatformIO
+build/
+.pio/
+.vscode/
+*.elf
+*.bin
+*.map
+
+# SO
+.DS_Store
+Thumbs.db
