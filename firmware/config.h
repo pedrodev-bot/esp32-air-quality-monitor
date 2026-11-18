@@ -1,13 +1,13 @@
 // config.h -> parametros NAO sensiveis (vai pro git)
 #pragma once
 
-#define FW_VERSION                "0.1.0"
+#define FW_VERSION                "0.7.0"
 
 // 1 = rodando no simulador Wokwi | 0 = hardware real
 #define SIMULACAO_WOKWI           1
 
 // ---------- Pinos ----------
-#define PIN_DHT                   4     // DATA do DHT
+#define PIN_DHT                   14     // DATA do DHT
 #define PIN_MQ5                   34    // AO do MQ-5 (ADC1, so entrada; ADC2 conflita com Wi-Fi)
 
 // ---------- DHT ----------

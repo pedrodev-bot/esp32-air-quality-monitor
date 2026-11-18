@@ -1,5 +1,5 @@
-## [0.7.0] - 2026-11-12
-### Changed
-- Migração temporária do broker MQTT (de IP Local/Home Assistant para `io.adafruit.com`) via `mqtt_manager.h` para validação de PoC.
-- Implementada rotina de autenticação com `AIO_USERNAME` e `AIO_KEY` no `mqttClient.connect()`.
-- Ajuste dinâmico das strings de tópicos MQTT para suportar a arquitetura de Feeds do Adafruit IO (`username/feeds/...`).
+## [0.8.0] - 2026-11-12
+### Added
+- Módulo `hardware_alerts.h` para gestão da interface de utilizador (HMI) física.
+- Suporte para Buzzer Ativo com chamadas não-bloqueantes (`millis()`) para bipes de transição e alarmes críticos intermitentes.
+- Suporte para LED RGB (configurável para Anodo ou Catodo Comum via flag `COMMON_ANODE`) indicando status da rede/aquecimento (fade azul) e qualidade do ar (verde, amarelo, vermelho piscante).

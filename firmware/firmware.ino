@@ -1,5 +1,5 @@
 // ESP32 Air Quality Detection System firmware
-// v0.6.0 - MQ-5 Filtered + DHT + Telegram alerts + MQTT (Home Assistant)
+// v0.7.0 - MQ-5 Filtered + DHT + Telegram alerts + MQTT (Home Assistant)
 #include "config.h"
 #include "wifi_manager.h"
 #include "telegram_notifier.h"
@@ -9,6 +9,7 @@
 #include "display_manager.h"
 #include "mqtt_manager.h"
 #include "openweather_manager.h"
+#include "hardware_alerts.h"
 
 static unsigned long lastRead = 0;
 static AirQuality::Level lastLevel = AirQuality::Level::BOM;
@@ -52,15 +53,14 @@ static String formatMessage(const char* title, int mq5Filtered, bool dhtOk, floa
 void setup() {
   Serial.begin(115200);
   delay(500);
-  Serial.printf("\n=== Air Quality v%s ===\n", "0.5.0");
+  Serial.printf("\n=== Air Quality v%s ===\n", "0.7.0");
 
   // Initialize sensors and display
   MQ5::begin();
   DhtSensor::begin();
   DisplayManager::begin();
-  
-  // Initialize MQTT connection for Home Assistant
   setupMQTT();
+  setupHardwareAlerts();
 
   for (int i = 0; i < numReadings; i++) {
     readings[i] = 0;
@@ -77,9 +77,9 @@ void loop() {
   WifiManager::ensureConnected();
   handleMQTTConnection();
   fetchRegionalAQIAsync();
-
-  // Continuously update OLED display with the latest known values
   DisplayManager::update(lastTemp, lastHum);
+  bool isWarmingUp = !MQ5::isWarmedUp();
+  handleHardwareAlerts(lastLevel, isWarmingUp);
 
   // Non-blocking delay using millis() - Syntax error fixed
   if (millis() - lastRead < SENSOR_READ_INTERVAL_MS) {
