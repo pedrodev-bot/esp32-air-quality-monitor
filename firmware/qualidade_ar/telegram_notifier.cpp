@@ -6,6 +6,9 @@
 
 namespace TelegramNotifier {
 
+static String lastKey = "";
+static unsigned long lastSent = 0;
+
 static String urlEncode(const String& s) {
   String out;
   const char* hex = "0123456789ABCDEF";
@@ -48,7 +51,7 @@ bool sendMessage(const String& text) {
   if (ok) {
     Serial.println("[TG] Mensagem enviada");
   } else {
-    // 401 = token errado | 400 = chat_id errado / bot sem conversa iniciada
+    // 401 = token errado | 400 = chat_id errado / faltou /start no bot
     Serial.printf("[TG] Erro HTTP %d: %s\n", code, http.getString().c_str());
   }
   http.end();
@@ -56,9 +59,6 @@ bool sendMessage(const String& text) {
 }
 
 bool sendAlert(const String& key, const String& text, unsigned long cooldownMs) {
-  static String lastKey = "";
-  static unsigned long lastSent = 0;
-
   bool sameKey = (key == lastKey);
   if (sameKey && lastSent != 0 && millis() - lastSent < cooldownMs) return false;
 
@@ -68,6 +68,11 @@ bool sendAlert(const String& key, const String& text, unsigned long cooldownMs) 
     return true;
   }
   return false;
+}
+
+void resetCooldown() {
+  lastKey = "";
+  lastSent = 0;
 }
 
 }  // namespace TelegramNotifier

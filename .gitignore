@@ -1,6 +1,9 @@
 # Segredos (NUNCA commitar)
 firmware/qualidade_ar/secrets.h
 
+# Pasta gerada por tools/gerar_wokwi.sh (contem secrets.h)
+build_wokwi/
+
 # Arduino / PlatformIO
 build/
 .pio/
