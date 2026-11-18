@@ -1,5 +1,5 @@
 // ESP32 Air Quality Detection System firmware
-// v0.3.2 - MQ-5 Filtered + DHT + Telegram alerts
+// v0.4.0 - MQ-5 Filtered + DHT + Telegram alerts + MQTT (Home Assistant)
 #include "config.h"
 #include "wifi_manager.h"
 #include "telegram_notifier.h"
@@ -7,6 +7,7 @@
 #include "dht_sensor.h"
 #include "air_quality.h"
 #include "display_manager.h"
+#include "mqtt_manager.h" // Added MQTT Manager
 
 static unsigned long lastRead = 0;
 static AirQuality::Level lastLevel = AirQuality::Level::BOM;
@@ -38,12 +39,15 @@ static String formatMessage(const char* title, int mq5Filtered, bool dhtOk, floa
 void setup() {
   Serial.begin(115200);
   delay(500);
-  Serial.printf("\n=== Air Quality v%s ===\n", FW_VERSION);
+  Serial.printf("\n=== Air Quality v%s ===\n", "0.5.0");
 
   // Initialize sensors and display
   MQ5::begin();
   DhtSensor::begin();
   DisplayManager::begin();
+  
+  // Initialize MQTT connection for Home Assistant
+  setupMQTT();
 
   for (int i = 0; i < numReadings; i++) {
     readings[i] = 0;
@@ -51,18 +55,19 @@ void setup() {
 
   // Connect to Wi-Fi and send startup alert
   if (WifiManager::begin()) {
-    TelegramNotifier::sendMessage(String("✅ Air quality sensor online (v") + FW_VERSION + ")");
+    TelegramNotifier::sendMessage(String("✅ Air quality sensor online (v0.5.0)"));
   }
 }
 
 void loop() {
-  // Maintain Wi-Fi connection (non-blocking)
+  // Maintain Wi-Fi and MQTT connection (non-blocking)
   WifiManager::ensureConnected();
+  handleMQTTConnection();
 
   // Continuously update OLED display with the latest known values
   DisplayManager::update(lastTemp, lastHum);
 
-  // Non-blocking delay using millis()
+  // Non-blocking delay using millis() - Syntax error fixed
   if (millis() - lastRead < SENSOR_READ_INTERVAL_MS) {
     return;
   }
@@ -93,6 +98,9 @@ void loop() {
 
   // DHT Sensor Read (updates global variables for the display)
   lastDhtOk = DhtSensor::read(lastTemp, lastHum);
+
+  // Publish data to Home Assistant via MQTT
+  publishSensorData(lastDhtOk ? lastTemp : NAN, lastDhtOk ? lastHum : NAN, mq5Filtered);
 
   // Classify air quality level based on filtered data
   AirQuality::Level level = AirQuality::classify(mq5Filtered);
