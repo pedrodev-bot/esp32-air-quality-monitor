@@ -39,3 +39,9 @@
 // Serao calibrados na Sprint 6 (Aula 6).
 #define MQ5_THRESHOLD_ATENCAO     1200
 #define MQ5_THRESHOLD_CRITICO     2400
+
+// ---------- OLED Display ----------
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
+#define OLED_I2C_ADDRESS 0x3C // Default I2C address for most 0.96" OLEDs

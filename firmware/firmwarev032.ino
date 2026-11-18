@@ -1,14 +1,20 @@
 // ESP32 Air Quality Detection System firmware
-// v0.3.1 - MQ-5 Filtered + DHT + Telegram alerts
+// v0.3.2 - MQ-5 Filtered + DHT + Telegram alerts
 #include "config.h"
 #include "wifi_manager.h"
 #include "telegram_notifier.h"
 #include "mq5_sensor.h"
 #include "dht_sensor.h"
 #include "air_quality.h"
+#include "display_manager.h"
 
 static unsigned long lastRead = 0;
 static AirQuality::Level lastLevel = AirQuality::Level::BOM;
+
+// Store last known sensor values for continuous display rendering
+static float lastTemp = NAN;
+static float lastHum = NAN;
+static bool lastDhtOk = false;
 
 // Moving average variables for MQ-5 filtering
 const int numReadings = 10;
@@ -34,9 +40,11 @@ void setup() {
   delay(500);
   Serial.printf("\n=== Air Quality v%s ===\n", FW_VERSION);
 
-  // Initialize sensors and filter array
+  // Initialize sensors and display
   MQ5::begin();
   DhtSensor::begin();
+  DisplayManager::begin();
+
   for (int i = 0; i < numReadings; i++) {
     readings[i] = 0;
   }
@@ -50,6 +58,9 @@ void setup() {
 void loop() {
   // Maintain Wi-Fi connection (non-blocking)
   WifiManager::ensureConnected();
+
+  // Continuously update OLED display with the latest known values
+  DisplayManager::update(lastTemp, lastHum);
 
   // Non-blocking delay using millis()
   if (millis() - lastRead < SENSOR_READ_INTERVAL_MS) {
@@ -78,29 +89,27 @@ void loop() {
   readings[readIndex] = mq5Raw;
   total = total + readings[readIndex];
   readIndex = (readIndex + 1) % numReadings;
-  
   int mq5Filtered = total / numReadings;
 
-  // DHT Sensor Read
-  float t = NAN, h = NAN;
-  bool dhtOk = DhtSensor::read(t, h);
+  // DHT Sensor Read (updates global variables for the display)
+  lastDhtOk = DhtSensor::read(lastTemp, lastHum);
 
   // Classify air quality level based on filtered data
   AirQuality::Level level = AirQuality::classify(mq5Filtered);
   Serial.printf("[SENSOR] MQ5_Raw=%d | MQ5_Filtered=%d | T=%.1fC | UR=%.0f%% | level=%s\n",
-                mq5Raw, mq5Filtered, dhtOk ? t : NAN, dhtOk ? h : NAN, AirQuality::name(level));
+                mq5Raw, mq5Filtered, lastDhtOk ? lastTemp : NAN, lastDhtOk ? lastHum : NAN, AirQuality::name(level));
 
   // Handle alerts based on quality level
   if (level == AirQuality::Level::CRITICO) {
     TelegramNotifier::sendAlert("CRITICO",
-      formatMessage("🚨 CRITICAL air quality!", mq5Filtered, dhtOk, t, h), ALERT_COOLDOWN_MS);
+      formatMessage("🚨 CRITICAL air quality!", mq5Filtered, lastDhtOk, lastTemp, lastHum), ALERT_COOLDOWN_MS);
   } else if (level == AirQuality::Level::ATENCAO) {
     TelegramNotifier::sendAlert("ATENCAO",
-      formatMessage("⚠️ Air quality warning", mq5Filtered, dhtOk, t, h), ALERT_COOLDOWN_MS);
+      formatMessage("⚠️ Air quality warning", mq5Filtered, lastDhtOk, lastTemp, lastHum), ALERT_COOLDOWN_MS);
   } else if (lastLevel != AirQuality::Level::BOM) {
     TelegramNotifier::resetCooldown();
     TelegramNotifier::sendMessage(
-      formatMessage("✅ Air quality normalized", mq5Filtered, dhtOk, t, h));
+      formatMessage("✅ Air quality normalized", mq5Filtered, lastDhtOk, lastTemp, lastHum));
   }
   lastLevel = level;
 }
